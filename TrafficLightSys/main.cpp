@@ -4,6 +4,8 @@
 
 int main()
 {
+	srand(static_cast<unsigned int>(time(0))); // Seed for random car generation
+	
 	std::cout << "Traffic Light System Simulation" << std::endl;
 	std::cout << "-------------------------------" << std::endl;
 
@@ -12,7 +14,7 @@ int main()
 	//print initial status
 	intersection.printStatus(0);
 	// Simulate for 30 seconds
-	for (int time = 1; time <= 5; time++)
+	for (int time = 1; time <= 2; time++)
 	{
 		// Add random cars to the queues (for demonstration)
 		int northCars = rand() % 3; // 0-2 cars
