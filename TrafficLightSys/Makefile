@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -std=c++17
 TARGET = traffic_light
-SOURCES = main.cpp Intersection.cpp
+SOURCES = main.cpp Intersection.cpp Simulator.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 
 all: $(TARGET)

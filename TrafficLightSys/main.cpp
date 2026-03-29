@@ -1,31 +1,13 @@
-
 #include <iostream>
-#include "Intersection.h"
+#include "Simulator.h"
 
 int main()
 {
-	srand(static_cast<unsigned int>(time(0))); // Seed for random car generation
-	
-	std::cout << "Traffic Light System Simulation" << std::endl;
-	std::cout << "-------------------------------" << std::endl;
+    std::cout << "Traffic Light System Simulation" << std::endl;
+    std::cout << "-------------------------------" << std::endl;
 
-	// Create an intersection with initial queue lengths and state times
-	Intersection intersection(5, 5, 5, 5, Intersection::NS_Green, 10);
-	//print initial status
-	intersection.printStatus(0);
-	// Simulate for 30 seconds
-	for (int time = 1; time <= 2; time++)
-	{
-		// Add random cars to the queues (for demonstration)
-		int northCars = rand() % 3; // 0-2 cars
-		int southCars = rand() % 3;
-		int eastCars = rand() % 3;
-		int westCars = rand() % 3;
-		intersection.addCars(northCars, southCars, eastCars, westCars);
-		intersection.update();
-		intersection.printStatus(time);
-	}
-	
+    Simulator sim(2, 2, 42);
+    sim.run(5);
 
-	return 0;
+    return 0;
 }
