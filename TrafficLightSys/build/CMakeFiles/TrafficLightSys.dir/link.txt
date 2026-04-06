@@ -1,1 +1,0 @@
-/usr/bin/c++ -fPIC -flto=auto -shared  -o TrafficLightSys.cpython-312-x86_64-linux-gnu.so CMakeFiles/TrafficLightSys.dir/bindings.cpp.o CMakeFiles/TrafficLightSys.dir/Intersection.cpp.o CMakeFiles/TrafficLightSys.dir/Simulator.cpp.o 
