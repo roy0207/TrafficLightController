@@ -77,155 +77,298 @@ def run_headless_demo():
 if not is_headless:
     class TrafficApp:
         """
-        This class manages the whole GUI application.
+        Main GUI class.
 
-        It is responsible for:
-        - creating the simulator
-        - building the tkinter layout
-        - updating the simulation
-        - refreshing what the user sees
+        This version gives you BOTH:
+        1. A visual traffic grid drawn on a Canvas
+        2. Detailed info boxes for each intersection
+
+        It also makes the whole window scrollable so the bottom row
+        of intersection boxes does not get cut off on smaller screens.
         """
 
         def __init__(self, root):
-            """
-            Constructor for the GUI app.
-
-            Parameters:
-                root -> the main tkinter window
-            """
-
-            # Save the tkinter root window
             self.root = root
-
-            # Set the title shown in the window bar
             self.root.title("Traffic Light System Viewer")
+            self.root.geometry("1200x980")
+            self.root.minsize(1000, 820)
 
             # Create the C++ simulator object
-            # Grid size = 2x2
-            # Seed = 42 for repeatable results
             self.sim = TrafficLightSys.Simulator(2, 2, 42)
 
-            # Ask the simulator how large the grid is
             self.rows = self.sim.getRows()
             self.cols = self.sim.getCols()
 
-            # This will store tkinter label widgets for each intersection
-            # So we can update them later
+            # Store info-box labels so we can refresh them
             self.cells = []
 
-            # Create a title label at the top of the GUI
+            # Track auto-run state
+            self.running = False
+
+            # ---------------------------------------------------
+            # Make the whole window scrollable
+            # ---------------------------------------------------
+            self.outer_canvas = tk.Canvas(root, bg="white", highlightthickness=0)
+            self.scrollbar = tk.Scrollbar(root, orient="vertical", command=self.outer_canvas.yview)
+            self.outer_canvas.configure(yscrollcommand=self.scrollbar.set)
+
+            self.scrollbar.pack(side="right", fill="y")
+            self.outer_canvas.pack(side="left", fill="both", expand=True)
+
+            # This frame holds ALL visible content
+            self.content_frame = tk.Frame(self.outer_canvas, bg="white")
+            self.canvas_window = self.outer_canvas.create_window(
+                (0, 0),
+                window=self.content_frame,
+                anchor="nw"
+            )
+
+            # Update scroll region whenever content size changes
+            self.content_frame.bind("<Configure>", self.on_frame_configure)
+
+            # Make inner frame width follow outer canvas width
+            self.outer_canvas.bind("<Configure>", self.on_canvas_configure)
+
+            # Mouse wheel scrolling
+            self.outer_canvas.bind_all("<MouseWheel>", self.on_mousewheel)
+
+            # -------------------------------
+            # Top title section
+            # -------------------------------
             self.title_label = tk.Label(
-                root,
+                self.content_frame,
                 text="Traffic Light System Simulation",
-                font=("Arial", 16, "bold")
+                font=("Arial", 18, "bold"),
+                bg="white"
             )
             self.title_label.pack(pady=10)
 
-            # Create a label to show the current simulation time
             self.time_label = tk.Label(
-                root,
+                self.content_frame,
                 text="Time: 0",
-                font=("Arial", 12)
+                font=("Arial", 12),
+                bg="white"
             )
             self.time_label.pack(pady=5)
 
-            # Create a frame to hold the 2x2 grid
-            self.grid_frame = tk.Frame(root)
+            # -------------------------------
+            # Controls
+            # -------------------------------
+            self.controls_frame = tk.Frame(self.content_frame, bg="white")
+            self.controls_frame.pack(pady=10)
+
+            self.step_button = tk.Button(
+                self.controls_frame,
+                text="Step Simulation",
+                command=self.step_simulation,
+                width=18
+            )
+            self.step_button.grid(row=0, column=0, padx=10)
+
+            self.run_button = tk.Button(
+                self.controls_frame,
+                text="Run Automatically",
+                command=self.auto_run,
+                width=18
+            )
+            self.run_button.grid(row=0, column=1, padx=10)
+
+            # -------------------------------
+            # Visual traffic grid canvas
+            # -------------------------------
+            self.canvas_label = tk.Label(
+                self.content_frame,
+                text="Visual Traffic Grid",
+                font=("Arial", 14, "bold"),
+                bg="white"
+            )
+            self.canvas_label.pack(pady=(10, 5))
+
+            self.canvas = tk.Canvas(
+                self.content_frame,
+                width=920,
+                height=360,
+                bg="white",
+                highlightthickness=1,
+                highlightbackground="black"
+            )
+            self.canvas.pack(pady=10)
+
+            # -------------------------------
+            # Detailed info-box section
+            # -------------------------------
+            self.grid_label = tk.Label(
+                self.content_frame,
+                text="Intersection Data Boxes",
+                font=("Arial", 14, "bold"),
+                bg="white"
+            )
+            self.grid_label.pack(pady=(15, 5))
+
+            self.grid_frame = tk.Frame(self.content_frame, bg="white")
             self.grid_frame.pack(padx=10, pady=10)
 
-            # Build the visible grid of intersection panels
             self.create_grid()
 
-            # Create a button to advance the simulation one step manually
-            self.step_button = tk.Button(
-                root,
-                text="Step Simulation",
-                command=self.step_simulation
-            )
-            self.step_button.pack(pady=5)
-
-            # Create a button to auto-run / stop the simulation
-            self.run_button = tk.Button(
-                root,
-                text="Run Automatically",
-                command=self.auto_run
-            )
-            self.run_button.pack(pady=5)
-
-            # Track whether auto-run is enabled
-            self.running = False
-
-            # Draw the initial state before any steps happen
+            # Initial draw
             self.refresh_display()
+
+        def on_frame_configure(self, event):
+            """
+            Update the scrollable region whenever the content frame changes size.
+            """
+            self.outer_canvas.configure(scrollregion=self.outer_canvas.bbox("all"))
+
+        def on_canvas_configure(self, event):
+            """
+            Make the inner content frame expand to match the visible canvas width.
+            """
+            self.outer_canvas.itemconfig(self.canvas_window, width=event.width)
+
+        def on_mousewheel(self, event):
+            """
+            Enable mouse wheel scrolling.
+            """
+            self.outer_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
         def create_grid(self):
             """
-            Create the 2x2 grid of panels.
-
-            Each panel is a frame containing one label.
-            The label text will later be updated with intersection state.
+            Create the detailed info-box grid.
             """
 
             for r in range(self.rows):
                 row_widgets = []
 
                 for c in range(self.cols):
-                    # Create a bordered frame for one intersection
                     frame = tk.Frame(
                         self.grid_frame,
                         bd=2,
                         relief="solid",
-                        padx=15,
-                        pady=15
+                        padx=12,
+                        pady=12,
+                        bg="white"
                     )
                     frame.grid(row=r, column=c, padx=10, pady=10)
 
-                    # Create a label inside that frame
                     label = tk.Label(
                         frame,
                         text="Loading...",
                         justify="left",
-                        font=("Courier New", 11, "bold"),
+                        font=("Courier New", 10, "bold"),
                         width=26,
-                        height=10
+                        height=8,
+                        bg="white"
                     )
                     label.pack()
 
-                    # Save the label so we can update it later
                     row_widgets.append(label)
 
                 self.cells.append(row_widgets)
 
         def get_light_text(self, state_value):
             """
-            Convert the C++ light state integer into readable text.
+            Convert C++ integer light state to readable text.
+            0 = NS_Green
+            1 = EW_Green
+            """
+            return "NS Green" if state_value == 0 else "EW Green"
 
-            In your C++ enum:
-                0 = NS_Green
-                1 = EW_Green
+        def draw_intersection_visual(self, x, y, cell, label_text):
+            """
+            Draw one intersection on the canvas as a road crossing.
+
+            Parameters:
+                x, y       -> center point of the intersection on the canvas
+                cell       -> the C++ Intersection object
+                label_text -> like "[0][0]"
             """
 
+            state_value = cell.getCurrentStateValue()
+
+            north = cell.getNorthQueue()
+            south = cell.getSouthQueue()
+            east = cell.getEastQueue()
+            west = cell.getWestQueue()
+
+            # Road colors depend on active direction
             if state_value == 0:
-                return "NS Green"
+                vertical_color = "green"
+                horizontal_color = "red"
             else:
-                return "EW Green"
+                vertical_color = "red"
+                horizontal_color = "green"
+
+            road_width = 18
+            road_len = 70
+
+            # Draw north-south road
+            self.canvas.create_line(
+                x, y - road_len, x, y + road_len,
+                fill=vertical_color, width=road_width
+            )
+
+            # Draw east-west road
+            self.canvas.create_line(
+                x - road_len, y, x + road_len, y,
+                fill=horizontal_color, width=road_width
+            )
+
+            # Draw center intersection square
+            self.canvas.create_rectangle(
+                x - 12, y - 12, x + 12, y + 12,
+                fill="gray25", outline="black"
+            )
+
+            # Draw small light indicators
+            ns_light_color = "lime" if state_value == 0 else "darkred"
+            ew_light_color = "lime" if state_value == 1 else "darkred"
+
+            # NS lights
+            self.canvas.create_oval(x - 6, y - 28, x + 6, y - 16, fill=ns_light_color)
+            self.canvas.create_oval(x - 6, y + 16, x + 6, y + 28, fill=ns_light_color)
+
+            # EW lights
+            self.canvas.create_oval(x - 28, y - 6, x - 16, y + 6, fill=ew_light_color)
+            self.canvas.create_oval(x + 16, y - 6, x + 28, y + 6, fill=ew_light_color)
+
+            # Intersection label
+            self.canvas.create_text(
+                x, y - 95,
+                text=f"Intersection {label_text}",
+                font=("Arial", 10, "bold")
+            )
+
+            # Queue labels around the roads
+            self.canvas.create_text(x, y - road_len - 18, text=f"N:{north}", font=("Arial", 10, "bold"))
+            self.canvas.create_text(x, y + road_len + 18, text=f"S:{south}", font=("Arial", 10, "bold"))
+            self.canvas.create_text(x - road_len - 24, y, text=f"W:{west}", font=("Arial", 10, "bold"))
+            self.canvas.create_text(x + road_len + 24, y, text=f"E:{east}", font=("Arial", 10, "bold"))
 
         def refresh_display(self):
             """
-            Read the latest simulation state from C++
-            and update every label in the GUI.
+            Refresh both:
+            1. visual canvas
+            2. detailed info boxes
             """
 
-            # Update the time label at the top
+            # Update time label
             self.time_label.config(text=f"Time: {self.sim.getCurrentTime()}")
 
-            # Loop through every intersection in the grid
+            # Clear the canvas before redrawing
+            self.canvas.delete("all")
+
+            # Fixed visual positions for 2x2 layout on the canvas
+            positions = {
+                (0, 0): (220, 110),
+                (0, 1): (700, 110),
+                (1, 0): (220, 270),
+                (1, 1): (700, 270),
+            }
+
             for r in range(self.rows):
                 for c in range(self.cols):
-                    # Get the C++ Intersection object for this cell
                     cell = self.sim.getIntersection(r, c)
 
-                    # Read all the values we want to display
                     state_value = cell.getCurrentStateValue()
                     light_text = self.get_light_text(state_value)
 
@@ -244,13 +387,13 @@ if not is_headless:
 
                     state_time = cell.getCurrentStateTime()
 
-                    # Color the cell differently depending on light state
+                    # Color for the info box
                     if state_value == 0:
-                        bg_color = "#d4ffd4"   # light green for NS green
+                        bg_color = "#d4ffd4"   # NS green
                     else:
-                        bg_color = "#d4e4ff"   # light blue for EW green
+                        bg_color = "#d4e4ff"   # EW green
 
-                    # Build the text shown inside the label
+                    # Update the detailed info box
                     display_text = (
                         f"Intersection [{r}][{c}]\n"
                         f"Light: {light_text}\n"
@@ -263,23 +406,23 @@ if not is_headless:
                         f"State Time: {state_time}"
                     )
 
-                    # Update the label text and background color
                     self.cells[r][c].config(text=display_text, bg=bg_color)
+
+                    # Draw the visual intersection on the canvas
+                    x, y = positions[(r, c)]
+                    self.draw_intersection_visual(x, y, cell, f"[{r}][{c}]")
 
         def step_simulation(self):
             """
-            Advance the simulation by one tick,
-            then refresh the GUI.
+            Advance the simulation by one tick, then redraw everything.
             """
-
             self.sim.step()
             self.refresh_display()
 
         def auto_run(self):
             """
-            Toggle automatic stepping of the simulation.
+            Toggle automatic stepping on/off.
             """
-
             self.running = not self.running
 
             if self.running:
@@ -290,14 +433,10 @@ if not is_headless:
 
         def run_loop(self):
             """
-            Repeatedly step the simulation every 1000 ms (1 second)
-            while auto-run is enabled.
+            Keep stepping once per second while running is enabled.
             """
-
             if self.running:
                 self.step_simulation()
-
-                # Schedule this function to run again after 1 second
                 self.root.after(1000, self.run_loop)
 
 
