@@ -5,15 +5,18 @@
 Simulator::Simulator(int numRows, int numCols, int seedValue)
 {
     currentTime = 0;
+    //constructor given seed parameter for reproducibility in testing/debugging
     seed = seedValue;
+    // Initialize grid with specified dimensions
     rows = numRows;
     cols = numCols;
 
-    srand(seed);
-
+    // Seed the random number generator for reproducibility
+    srand(seed); 
+    // Create a grid of intersections
     grid.resize(rows, std::vector<Intersection>(cols));
 }
-
+// increment time, add random cars, update each intersection's state
 void Simulator::step()
 {
     currentTime++;

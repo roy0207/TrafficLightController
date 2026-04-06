@@ -38,6 +38,7 @@ Intersection::Intersection(int north, int south, int east, int west,
 	maxStateTime = maxTime;
 }
 
+// Add new cars to the queues
 void Intersection::addCars(int north, int south, int east, int west)
 {
 	north_queue += north;
@@ -45,7 +46,7 @@ void Intersection::addCars(int north, int south, int east, int west)
 	east_queue += east;
 	west_queue += west;
 }
-
+// Move cars through the intersection based on the current light state
 void Intersection::moveCars()
 {
 	if (currentState == NS_Green)
