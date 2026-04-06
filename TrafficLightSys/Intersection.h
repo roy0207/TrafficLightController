@@ -51,6 +51,11 @@ public:
 	int getWestWaitTime() const;
 
 	lightState getCurrentState() const;
+	//getter for currentStateTime so Python can access how 
+	// long we've been in the current light phase
+	// since we are using an enum, we can return the current 
+	// state as an int (0 for NS_Green, 1 for EW_Green)
+	int getCurrentStateValue() const;
 	int getCurrentStateTime() const;
 
 
