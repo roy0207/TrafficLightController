@@ -15,12 +15,16 @@ Intersection::Intersection()
 
 	currentState = NS_Green;
 	currentStateTime = 0;
+
 	minStateTime = 3;
 	maxStateTime = 6;
+
+	// Default intersection uses adaptive control
+	mode = Adaptive_Control;
 }
 
 Intersection::Intersection(int north, int south, int east, int west,
-	lightState initialState, int minTime, int maxTime)
+	lightState initialState, int minTime, int maxTime, controlMode selectedMode)
 {
 	north_queue = north;
 	south_queue = south;
@@ -34,8 +38,11 @@ Intersection::Intersection(int north, int south, int east, int west,
 
 	currentState = initialState;
 	currentStateTime = 0;
+
 	minStateTime = minTime;
 	maxStateTime = maxTime;
+
+	mode = selectedMode;
 }
 
 void Intersection::addCars(int north, int south, int east, int west)
@@ -100,9 +107,14 @@ void Intersection::updateWaitTimes()
 	}
 }
 
-int Intersection::getCurrentStateValue() const 
+int Intersection::getCurrentStateValue() const
 {
 	return static_cast<int>(currentState);
+}
+
+int Intersection::getControlModeValue() const
+{
+	return static_cast<int>(mode);
 }
 
 int Intersection::getNSCongestion() const
@@ -113,9 +125,9 @@ int Intersection::getNSCongestion() const
 int Intersection::getEWCongestion() const
 {
 	return east_queue + west_queue + eastWaitTime + westWaitTime;
-
 }
-int Intersection::getNorthQueue() const 
+
+int Intersection::getNorthQueue() const
 {
 	return north_queue;
 }
@@ -124,10 +136,12 @@ int Intersection::getSouthQueue() const
 {
 	return south_queue;
 }
+
 int Intersection::getEastQueue() const
 {
 	return east_queue;
 }
+
 int Intersection::getWestQueue() const
 {
 	return west_queue;
@@ -137,14 +151,17 @@ int Intersection::getNorthWaitTime() const
 {
 	return northWaitTime;
 }
+
 int Intersection::getSouthWaitTime() const
 {
 	return southWaitTime;
 }
+
 int Intersection::getEastWaitTime() const
 {
 	return eastWaitTime;
 }
+
 int Intersection::getWestWaitTime() const
 {
 	return westWaitTime;
@@ -154,26 +171,34 @@ Intersection::lightState Intersection::getCurrentState() const
 {
 	return currentState;
 }
+
 int Intersection::getCurrentStateTime() const
 {
 	return currentStateTime;
 }
 
-
-
-
 bool Intersection::shouldSwitch() const
 {
+	// Fixed control ignores congestion completely.
+	// It only switches when the fixed max timer is reached.
+	if (mode == Fixed_Control)
+	{
+		return currentStateTime >= maxStateTime;
+	}
+
+	// Adaptive control must first respect the minimum green time.
 	if (currentStateTime < minStateTime)
 	{
 		return false;
 	}
 
+	// Adaptive control must switch once max time is reached.
 	if (currentStateTime >= maxStateTime)
 	{
 		return true;
 	}
 
+	// After minimum time, adaptive control compares congestion.
 	if (currentState == NS_Green)
 	{
 		return getEWCongestion() > getNSCongestion();
@@ -193,7 +218,6 @@ void Intersection::update()
 
 	if (shouldSwitch())
 	{
-		std::cout << "Switching light state at time " << currentStateTime << " seconds" << std::endl;
 		switchState();
 	}
 }
@@ -215,6 +239,11 @@ void Intersection::switchState()
 void Intersection::printStatus(int currentTime) const
 {
 	std::cout << "Time: " << currentTime << " seconds" << std::endl;
+
+	std::cout << "Control Mode: "
+		<< (mode == Fixed_Control ? "Fixed" : "Adaptive")
+		<< std::endl;
+
 	std::cout << "North Queue: " << north_queue << " cars" << std::endl;
 	std::cout << "South Queue: " << south_queue << " cars" << std::endl;
 	std::cout << "East Queue: " << east_queue << " cars" << std::endl;

@@ -11,19 +11,23 @@ private:
     int seed;
     int rows;
     int cols;
-    std::vector<std::vector<Intersection>> grid;
+
+    // Two separate grids with the same layout
+    std::vector<std::vector<Intersection>> fixedGrid;
+    std::vector<std::vector<Intersection>> adaptiveGrid;
 
 public:
     Simulator(int numRows, int numCols, int seedValue);
 
-    void run(int steps);   // CLI / testing
-    void step();           // GUI / single tick
+    void step();
+    void run(int steps);
 
     int getRows() const;
     int getCols() const;
     int getCurrentTime() const;
 
-    const Intersection& getIntersection(int row, int col) const;
+    const Intersection& getFixedIntersection(int row, int col) const;
+    const Intersection& getAdaptiveIntersection(int row, int col) const;
 };
 
 #endif
