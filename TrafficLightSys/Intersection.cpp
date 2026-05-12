@@ -1,6 +1,9 @@
 #include "Intersection.h"
 #include <iostream>
 
+//Implementation of the Intersection class functions
+
+// Default constructor initializes all queues and wait times to 0, sets the initial light state to NS_Green, and uses adaptive control mode.
 Intersection::Intersection()
 {
 	north_queue = 0;
@@ -23,6 +26,7 @@ Intersection::Intersection()
 	mode = Adaptive_Control;
 }
 
+// Parameterized constructor allows setting initial queues, light state, timing, and control mode.
 Intersection::Intersection(int north, int south, int east, int west,
 	lightState initialState, int minTime, int maxTime, controlMode selectedMode)
 {
@@ -53,6 +57,7 @@ void Intersection::addCars(int north, int south, int east, int west)
 	west_queue += west;
 }
 
+// Move cars through the intersection based on the current light state. Cars can only move if their direction has a green light.
 void Intersection::moveCars()
 {
 	if (currentState == NS_Green)
@@ -73,6 +78,8 @@ void Intersection::moveCars()
 	}
 }
 
+// Update wait times for cars in the queues. Cars in the direction with a red light will have their wait time increased, 
+// while cars in the direction with a green light will have their wait time reset to 0.
 void Intersection::updateWaitTimes()
 {
 	if (currentState == NS_Green)
@@ -107,6 +114,7 @@ void Intersection::updateWaitTimes()
 	}
 }
 
+// Getter functions to retrieve the current state and control mode as integers for easier display and comparison.
 int Intersection::getCurrentStateValue() const
 {
 	return static_cast<int>(currentState);
@@ -177,6 +185,8 @@ int Intersection::getCurrentStateTime() const
 	return currentStateTime;
 }
 
+// Determine if the traffic light should switch based on the control mode and congestion levels. Our main algorithm for adaptive control is here.
+
 bool Intersection::shouldSwitch() const
 {
 	// Fixed control ignores congestion completely.
@@ -208,7 +218,7 @@ bool Intersection::shouldSwitch() const
 		return getNSCongestion() > getEWCongestion();
 	}
 }
-
+// Update the state of the intersection by moving cars, updating wait times, and checking if we should switch the light state.
 void Intersection::update()
 {
 	moveCars();
@@ -222,6 +232,7 @@ void Intersection::update()
 	}
 }
 
+// Switch the light state from NS_Green to EW_Green or vice versa, and reset the state timer.
 void Intersection::switchState()
 {
 	if (currentState == NS_Green)
@@ -235,6 +246,10 @@ void Intersection::switchState()
 
 	currentStateTime = 0;
 }
+
+
+//ignore this code as it was only used for debugging and demonstration purposes.
+// It prints the current status of the intersection, including the time, control mode, queue lengths, wait times, congestion levels, and light state.
 
 void Intersection::printStatus(int currentTime) const
 {
