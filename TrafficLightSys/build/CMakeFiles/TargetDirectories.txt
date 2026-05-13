@@ -1,3 +1,0 @@
-/workspaces/trafficLightSystem/TrafficLightSys/build/CMakeFiles/TrafficLightSys.dir
-/workspaces/trafficLightSystem/TrafficLightSys/build/CMakeFiles/edit_cache.dir
-/workspaces/trafficLightSystem/TrafficLightSys/build/CMakeFiles/rebuild_cache.dir
